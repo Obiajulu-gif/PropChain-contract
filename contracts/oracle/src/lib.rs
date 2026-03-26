@@ -578,8 +578,8 @@ mod propchain_oracle {
 
         /// Retrieve the most recent manually-submitted price for a property.
         fn get_latest_manual_price(&self, property_id: u64) -> Result<PriceData, OracleError> {
-            // Check the valuation history for the latest entry
-            if let Some(history) = self.valuation_history.get(property_id) {
+            // Check the historical valuations for the latest entry
+            if let Some(history) = self.historical_valuations.get(property_id) {
                 if let Some(latest) = history.last() {
                     if self.is_price_fresh(latest) {
                         return Ok(latest.clone());
