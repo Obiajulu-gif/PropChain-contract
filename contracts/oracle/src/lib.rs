@@ -577,12 +577,17 @@ mod propchain_oracle {
         }
 
         /// Retrieve the most recent manually-submitted price for a property.
+        /// Converts from PropertyValuation (storage format) to PriceData (oracle format).
         fn get_latest_manual_price(&self, property_id: u64) -> Result<PriceData, OracleError> {
-            // Check the historical valuations for the latest entry
             if let Some(history) = self.historical_valuations.get(property_id) {
                 if let Some(latest) = history.last() {
-                    if self.is_price_fresh(latest) {
-                        return Ok(latest.clone());
+                    let price_data = PriceData {
+                        price: latest.valuation,
+                        timestamp: latest.last_updated,
+                        source: ink::prelude::string::String::from("manual"),
+                    };
+                    if self.is_price_fresh(&price_data) {
+                        return Ok(price_data);
                     }
                 }
             }
