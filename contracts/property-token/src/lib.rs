@@ -1,5 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(unexpected_cfgs)]
+#![allow(
+    unexpected_cfgs,
+    clippy::type_complexity,
+    clippy::needless_borrows_for_generic_args
+)]
 
 use ink::prelude::string::String;
 use ink::storage::Mapping;
@@ -2612,7 +2616,7 @@ mod property_token {
             self.error_counts.insert(&key, &(current_count + 1));
 
             // Update error rate (1 hour window)
-            let window_duration = 3600_000u64; // 1 hour in milliseconds
+            let window_duration = 3_600_000_u64; // 1 hour in milliseconds
             let rate_key = error_code.clone();
             let (mut count, window_start) =
                 self.error_rates.get(&rate_key).unwrap_or((0, timestamp));
@@ -2656,7 +2660,7 @@ mod property_token {
         #[ink(message)]
         pub fn get_error_rate(&self, error_code: String) -> u64 {
             let timestamp = self.env().block_timestamp();
-            let window_duration = 3600_000u64; // 1 hour
+            let window_duration = 3_600_000_u64; // 1 hour
 
             if let Some((count, window_start)) = self.error_rates.get(&error_code) {
                 if timestamp >= window_start + window_duration {
@@ -2678,11 +2682,7 @@ mod property_token {
             }
 
             let mut errors = Vec::new();
-            let start_id = if self.error_log_counter > limit as u64 {
-                self.error_log_counter - limit as u64
-            } else {
-                0
-            };
+            let start_id = self.error_log_counter.saturating_sub(limit as u64);
 
             for i in start_id..self.error_log_counter {
                 if let Some(entry) = self.recent_errors.get(&i) {
