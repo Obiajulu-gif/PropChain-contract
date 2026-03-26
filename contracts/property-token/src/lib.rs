@@ -923,6 +923,18 @@ mod property_token {
             ))
         }
 
+        /// Sets the compliance registry contract address (admin only).
+        ///
+        /// When set, compliance checks are delegated to this external contract
+        /// for share transfers and purchases.
+        ///
+        /// # Arguments
+        ///
+        /// * `registry` - The account ID of the compliance registry contract
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn set_compliance_registry(&mut self, registry: AccountId) -> Result<(), Error> {
             let caller = self.env().caller();
@@ -949,6 +961,7 @@ mod property_token {
             Ok(())
         }
 
+        /// Returns the linked property-management contract address, if set.
         #[ink(message)]
         pub fn get_property_management_contract(&self) -> Option<AccountId> {
             self.property_management_contract
@@ -971,6 +984,15 @@ mod property_token {
             Ok(())
         }
 
+        /// Removes the management agent assignment for a token (owner or admin only).
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token to clear the management agent for
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn clear_management_agent(&mut self, token_id: TokenId) -> Result<(), Error> {
             let caller = self.env().caller();
@@ -983,21 +1005,38 @@ mod property_token {
             Ok(())
         }
 
+        /// Returns the management agent for a token, if one is assigned.
         #[ink(message)]
         pub fn get_management_agent(&self, token_id: TokenId) -> Option<AccountId> {
             self.management_agent.get(token_id)
         }
 
+        /// Returns the total number of fractional shares issued for a token.
         #[ink(message)]
         pub fn total_shares(&self, token_id: TokenId) -> u128 {
             self.total_shares.get(token_id).unwrap_or(0)
         }
 
+        /// Returns the fractional share balance for a given owner and token.
         #[ink(message)]
         pub fn share_balance_of(&self, owner: AccountId, token_id: TokenId) -> u128 {
             self.balances.get((owner, token_id)).unwrap_or(0)
         }
 
+        /// Issues new fractional shares for a token to a recipient (owner or admin only).
+        ///
+        /// Increases both the recipient's balance and the total share supply.
+        /// Dividend credits are updated to prevent dilution of existing holders.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token to issue shares for
+        /// * `to` - The recipient of the new shares
+        /// * `amount` - The number of shares to issue (must be greater than zero)
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn issue_shares(
             &mut self,
@@ -1028,6 +1067,20 @@ mod property_token {
             Ok(())
         }
 
+        /// Redeems (burns) fractional shares from an account.
+        ///
+        /// The caller must be the account holder or an approved operator.
+        /// Reduces both the holder's balance and the total share supply.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token whose shares are being redeemed
+        /// * `from` - The account to redeem shares from
+        /// * `amount` - The number of shares to redeem (must be greater than zero)
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn redeem_shares(
             &mut self,
@@ -1060,6 +1113,22 @@ mod property_token {
             Ok(())
         }
 
+        /// Transfers fractional shares between accounts with compliance checks.
+        ///
+        /// Both sender and recipient must pass compliance verification when a
+        /// compliance registry is configured. Dividend credits are updated for
+        /// both parties before the transfer.
+        ///
+        /// # Arguments
+        ///
+        /// * `from` - The account to transfer shares from
+        /// * `to` - The account to transfer shares to
+        /// * `token_id` - The token whose shares are being transferred
+        /// * `amount` - The number of shares to transfer (must be greater than zero)
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn transfer_shares(
             &mut self,
@@ -1092,6 +1161,19 @@ mod property_token {
             Ok(())
         }
 
+        /// Deposits dividends for distribution to all share holders of a token.
+        ///
+        /// The deposited value is distributed proportionally based on each holder's
+        /// share balance. Uses a scaled-integer approach (1e12 scaling factor) to
+        /// maintain precision across small balances.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token to deposit dividends for
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message, payable)]
         pub fn deposit_dividends(&mut self, token_id: TokenId) -> Result<(), Error> {
             let value = self.env().transferred_value();
@@ -1115,6 +1197,18 @@ mod property_token {
             Ok(())
         }
 
+        /// Withdraws accumulated dividends for the caller on a given token.
+        ///
+        /// Calculates any uncredited dividends, transfers the total owed amount
+        /// to the caller, and updates the tax record.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token to withdraw dividends from
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<u128, Error>` with the amount withdrawn
         #[ink(message)]
         pub fn withdraw_dividends(&mut self, token_id: TokenId) -> Result<u128, Error> {
             let caller = self.env().caller();
@@ -1147,6 +1241,20 @@ mod property_token {
             }
         }
 
+        /// Creates a governance proposal for a tokenized property.
+        ///
+        /// Only the token owner or admin may create proposals. Voting weight
+        /// is determined by each voter's share balance.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token the proposal applies to
+        /// * `quorum` - Minimum for-votes required for the proposal to pass
+        /// * `description_hash` - Hash of the off-chain proposal description
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<u64, Error>` with the new proposal ID
         #[ink(message)]
         pub fn create_proposal(
             &mut self,
@@ -1180,6 +1288,20 @@ mod property_token {
             Ok(counter)
         }
 
+        /// Casts a vote on an open governance proposal.
+        ///
+        /// Voting weight equals the caller's share balance for the token.
+        /// Each account may only vote once per proposal.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token the proposal belongs to
+        /// * `proposal_id` - The proposal to vote on
+        /// * `support` - `true` to vote in favor, `false` to vote against
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn vote(
             &mut self,
@@ -1221,6 +1343,18 @@ mod property_token {
             Ok(())
         }
 
+        /// Executes a governance proposal, closing voting and recording the outcome.
+        ///
+        /// A proposal passes if for-votes meet the quorum and exceed against-votes.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token the proposal belongs to
+        /// * `proposal_id` - The proposal to execute
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<bool, Error>` where `true` means the proposal passed
         #[ink(message)]
         pub fn execute_proposal(
             &mut self,
@@ -1250,6 +1384,20 @@ mod property_token {
             Ok(passed)
         }
 
+        /// Places a sell order (ask) for fractional shares on the marketplace.
+        ///
+        /// The specified shares are moved into escrow and a persistent ask is
+        /// created. Other accounts can fill the ask via `buy_shares`.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token whose shares are being offered
+        /// * `price_per_share` - Price per share in the native currency
+        /// * `amount` - Number of shares to sell
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn place_ask(
             &mut self,
@@ -1287,6 +1435,15 @@ mod property_token {
             Ok(())
         }
 
+        /// Cancels an active sell order and returns escrowed shares to the seller.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token whose ask is being cancelled
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message)]
         pub fn cancel_ask(&mut self, token_id: TokenId) -> Result<(), Error> {
             let seller = self.env().caller();
@@ -1304,6 +1461,21 @@ mod property_token {
             Ok(())
         }
 
+        /// Purchases fractional shares from an existing sell order.
+        ///
+        /// The caller must send exactly `price_per_share * amount` as the
+        /// transferred value. Both buyer and seller must pass compliance checks.
+        /// Proceeds are forwarded to the seller and a tax record is updated.
+        ///
+        /// # Arguments
+        ///
+        /// * `token_id` - The token whose shares are being purchased
+        /// * `seller` - The account that placed the sell order
+        /// * `amount` - Number of shares to buy
+        ///
+        /// # Returns
+        ///
+        /// Returns `Result<(), Error>` indicating success or failure
         #[ink(message, payable)]
         pub fn buy_shares(
             &mut self,
@@ -1373,11 +1545,24 @@ mod property_token {
             Ok(())
         }
 
+        /// Returns the last trade price per share for a token, if any trades have occurred.
         #[ink(message)]
         pub fn get_last_trade_price(&self, token_id: TokenId) -> Option<u128> {
             self.last_trade_price.get(token_id)
         }
 
+        /// Returns a portfolio summary for a set of tokens owned by an account.
+        ///
+        /// Each entry contains (token_id, share_balance, last_trade_price).
+        ///
+        /// # Arguments
+        ///
+        /// * `owner` - The account to query
+        /// * `token_ids` - The tokens to include in the portfolio summary
+        ///
+        /// # Returns
+        ///
+        /// Returns a vector of `(TokenId, balance, last_price)` tuples
         #[ink(message)]
         pub fn get_portfolio(
             &self,
@@ -1393,6 +1578,7 @@ mod property_token {
             out
         }
 
+        /// Returns the tax record for an account and token, summarizing dividends and sales.
         #[ink(message)]
         pub fn get_tax_record(&self, owner: AccountId, token_id: TokenId) -> TaxRecord {
             self.tax_records
