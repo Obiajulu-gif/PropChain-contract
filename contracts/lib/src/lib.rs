@@ -254,7 +254,7 @@ mod propchain_contracts {
 
     /// Configuration for batch operations
     #[derive(
-        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct BatchConfig {
@@ -274,7 +274,7 @@ mod propchain_contracts {
     }
 
     /// Result of a batch operation with partial success support
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+    #[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct BatchResult {
         /// Successfully processed item IDs.
@@ -286,7 +286,7 @@ mod propchain_contracts {
     }
 
     /// A single item failure within a batch operation
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+    #[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct BatchItemFailure {
         /// Position in the input array.
@@ -298,7 +298,7 @@ mod propchain_contracts {
     }
 
     /// Metrics for a single batch operation call
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+    #[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct BatchMetrics {
         pub total_items: u32,
@@ -310,7 +310,7 @@ mod propchain_contracts {
 
     /// Historical batch operation statistics (stored on-chain)
     #[derive(
-        Debug, Clone, PartialEq, Default, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, Eq, Default, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct BatchOperationStats {
@@ -696,15 +696,18 @@ mod propchain_contracts {
     #[ink(event)]
     pub struct BatchOperationCompleted {
         /// 0=register, 1=transfer, 2=metadata_update, 3=transfer_multiple
-        pub operation_code: u8,
+        operation_code: u8,
         #[ink(topic)]
-        pub caller: AccountId,
-        pub total_items: u32,
-        pub successful_items: u32,
-        pub failed_items: u32,
-        pub early_terminated: bool,
-        pub timestamp: u64,
-        pub block_number: u32,
+        caller: AccountId,
+        #[ink(topic)]
+        event_version: u8,
+        total_items: u32,
+        successful_items: u32,
+        failed_items: u32,
+        early_terminated: bool,
+        timestamp: u64,
+        block_number: u32,
+        transaction_hash: Hash,
     }
 
     /// Event emitted when a badge is issued to a property
