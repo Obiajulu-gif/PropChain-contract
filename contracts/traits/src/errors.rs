@@ -36,6 +36,7 @@ pub trait ContractError: fmt::Debug + fmt::Display + Encode + Decode {
             4000..=4999 => ErrorCategory::Oracle,
             5000..=5999 => ErrorCategory::Fees,
             6000..=6999 => ErrorCategory::Compliance,
+            7000..=7999 => ErrorCategory::Dex,
             _ => ErrorCategory::Unknown,
         }
     }
@@ -52,6 +53,7 @@ pub enum ErrorCategory {
     Oracle,
     Fees,
     Compliance,
+    Dex,
     Unknown,
 }
 
@@ -65,6 +67,7 @@ impl fmt::Display for ErrorCategory {
             ErrorCategory::Oracle => write!(f, "Oracle"),
             ErrorCategory::Fees => write!(f, "Fees"),
             ErrorCategory::Compliance => write!(f, "Compliance"),
+            ErrorCategory::Dex => write!(f, "Dex"),
             ErrorCategory::Unknown => write!(f, "Unknown"),
         }
     }
@@ -103,7 +106,9 @@ pub enum CommonError {
 impl fmt::Display for CommonError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CommonError::Unauthorized => write!(f, "Unauthorized: caller lacks required permissions"),
+            CommonError::Unauthorized => {
+                write!(f, "Unauthorized: caller lacks required permissions")
+            }
             CommonError::InvalidParameters => write!(f, "Invalid parameters provided to function"),
             CommonError::NotFound => write!(f, "Resource not found"),
             CommonError::InsufficientFunds => write!(f, "Insufficient funds or balance"),
@@ -124,7 +129,9 @@ impl ContractError for CommonError {
 
     fn error_description(&self) -> &'static str {
         match self {
-            CommonError::Unauthorized => "Caller does not have permission to perform this operation",
+            CommonError::Unauthorized => {
+                "Caller does not have permission to perform this operation"
+            }
             CommonError::InvalidParameters => "One or more function parameters are invalid",
             CommonError::NotFound => "The requested resource does not exist",
             CommonError::InsufficientFunds => "Account has insufficient balance for this operation",
@@ -255,4 +262,23 @@ pub mod compliance_codes {
     pub const COMPLIANCE_CHECK_FAILED: u32 = 6003;
     pub const COMPLIANCE_DOCUMENT_MISSING: u32 = 6004;
     pub const COMPLIANCE_EXPIRED: u32 = 6005;
+}
+
+/// DEX error codes (7000-7999)
+pub mod dex_codes {
+    pub const DEX_UNAUTHORIZED: u32 = 7001;
+    pub const DEX_INVALID_PAIR: u32 = 7002;
+    pub const DEX_POOL_NOT_FOUND: u32 = 7003;
+    pub const DEX_INSUFFICIENT_LIQUIDITY: u32 = 7004;
+    pub const DEX_SLIPPAGE_EXCEEDED: u32 = 7005;
+    pub const DEX_ORDER_NOT_FOUND: u32 = 7006;
+    pub const DEX_INVALID_ORDER: u32 = 7007;
+    pub const DEX_ORDER_NOT_EXECUTABLE: u32 = 7008;
+    pub const DEX_REWARD_UNAVAILABLE: u32 = 7009;
+    pub const DEX_PROPOSAL_NOT_FOUND: u32 = 7010;
+    pub const DEX_PROPOSAL_CLOSED: u32 = 7011;
+    pub const DEX_ALREADY_VOTED: u32 = 7012;
+    pub const DEX_INVALID_BRIDGE_ROUTE: u32 = 7013;
+    pub const DEX_CROSS_CHAIN_TRADE_NOT_FOUND: u32 = 7014;
+    pub const DEX_INSUFFICIENT_GOVERNANCE_BALANCE: u32 = 7015;
 }

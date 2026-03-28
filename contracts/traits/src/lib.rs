@@ -2,9 +2,10 @@
 
 pub mod errors;
 
-use ink::prelude::string::String;
-use ink::primitives::AccountId;
 pub use errors::*;
+use ink::prelude::string::String;
+use ink::prelude::vec::Vec;
+use ink::primitives::AccountId;
 
 /// Error types for the Property Valuation Oracle
 #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -40,12 +41,16 @@ impl core::fmt::Display for OracleError {
             OracleError::PropertyNotFound => write!(f, "Property not found in the oracle system"),
             OracleError::InsufficientSources => write!(f, "Insufficient oracle sources available"),
             OracleError::InvalidValuation => write!(f, "Valuation data is invalid or out of range"),
-            OracleError::Unauthorized => write!(f, "Caller is not authorized to perform this operation"),
+            OracleError::Unauthorized => {
+                write!(f, "Caller is not authorized to perform this operation")
+            }
             OracleError::OracleSourceNotFound => write!(f, "Oracle source does not exist"),
             OracleError::InvalidParameters => write!(f, "Invalid parameters provided"),
             OracleError::PriceFeedError => write!(f, "Error from external price feed"),
             OracleError::AlertNotFound => write!(f, "Price alert not found"),
-            OracleError::InsufficientReputation => write!(f, "Oracle source has insufficient reputation"),
+            OracleError::InsufficientReputation => {
+                write!(f, "Oracle source has insufficient reputation")
+            }
             OracleError::SourceAlreadyExists => write!(f, "Oracle source already registered"),
             OracleError::RequestPending => write!(f, "Valuation request is still pending"),
         }
@@ -71,17 +76,31 @@ impl ContractError for OracleError {
 
     fn error_description(&self) -> &'static str {
         match self {
-            OracleError::PropertyNotFound => "The requested property does not exist in the oracle system",
-            OracleError::InsufficientSources => "Not enough oracle sources are available to provide a reliable valuation",
-            OracleError::InvalidValuation => "The valuation data is invalid, zero, or out of acceptable range",
-            OracleError::Unauthorized => "Caller does not have permission to perform this operation",
+            OracleError::PropertyNotFound => {
+                "The requested property does not exist in the oracle system"
+            }
+            OracleError::InsufficientSources => {
+                "Not enough oracle sources are available to provide a reliable valuation"
+            }
+            OracleError::InvalidValuation => {
+                "The valuation data is invalid, zero, or out of acceptable range"
+            }
+            OracleError::Unauthorized => {
+                "Caller does not have permission to perform this operation"
+            }
             OracleError::OracleSourceNotFound => "The specified oracle source does not exist",
             OracleError::InvalidParameters => "One or more function parameters are invalid",
             OracleError::PriceFeedError => "Failed to retrieve data from external price feed",
             OracleError::AlertNotFound => "The requested price alert does not exist",
-            OracleError::InsufficientReputation => "Oracle source reputation is below required threshold",
-            OracleError::SourceAlreadyExists => "An oracle source with this identifier already exists",
-            OracleError::RequestPending => "A valuation request for this property is already pending",
+            OracleError::InsufficientReputation => {
+                "Oracle source reputation is below required threshold"
+            }
+            OracleError::SourceAlreadyExists => {
+                "An oracle source with this identifier already exists"
+            }
+            OracleError::RequestPending => {
+                "A valuation request for this property is already pending"
+            }
         }
     }
 
@@ -759,6 +778,236 @@ pub trait DynamicFeeProvider {
     /// Get recommended fee for an operation (market-based price discovery)
     #[ink(message)]
     fn get_recommended_fee(&self, operation: FeeOperation) -> u128;
+}
+
+// =============================================================================
+// DEX and Trading primitives (Issue #70)
+// =============================================================================
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum OrderSide {
+    Buy,
+    Sell,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum OrderType {
+    Market,
+    Limit,
+    StopLoss,
+    TakeProfit,
+    Twap,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum TimeInForce {
+    GoodTillCancelled,
+    ImmediateOrCancel,
+    FillOrKill,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum OrderStatus {
+    Open,
+    PartiallyFilled,
+    Filled,
+    Cancelled,
+    Triggered,
+    Expired,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum CrossChainTradeStatus {
+    Pending,
+    BridgeRequested,
+    InFlight,
+    Settled,
+    Cancelled,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct LiquidityPool {
+    pub pair_id: u64,
+    pub base_token: TokenId,
+    pub quote_token: TokenId,
+    pub reserve_base: u128,
+    pub reserve_quote: u128,
+    pub total_lp_shares: u128,
+    pub fee_bips: u32,
+    pub reward_index: u128,
+    pub cumulative_volume: u128,
+    pub last_price: u128,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct LiquidityPosition {
+    pub lp_shares: u128,
+    pub reward_debt: u128,
+    pub provided_base: u128,
+    pub provided_quote: u128,
+    pub pending_rewards: u128,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct TradingOrder {
+    pub order_id: u64,
+    pub pair_id: u64,
+    pub trader: AccountId,
+    pub side: OrderSide,
+    pub order_type: OrderType,
+    pub time_in_force: TimeInForce,
+    pub price: u128,
+    pub amount: u128,
+    pub remaining_amount: u128,
+    pub trigger_price: Option<u128>,
+    pub twap_interval: Option<u64>,
+    pub reduce_only: bool,
+    pub status: OrderStatus,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct PairAnalytics {
+    pub pair_id: u64,
+    pub last_price: u128,
+    pub twap_price: u128,
+    pub reference_price: u128,
+    pub cumulative_volume: u128,
+    pub trade_count: u64,
+    pub best_bid: u128,
+    pub best_ask: u128,
+    pub volatility_bips: u32,
+    pub last_updated: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct LiquidityMiningCampaign {
+    pub emission_rate: u128,
+    pub start_block: u64,
+    pub end_block: u64,
+    pub reward_token_symbol: String,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct GovernanceProposal {
+    pub proposal_id: u64,
+    pub proposer: AccountId,
+    pub title: String,
+    pub description_hash: [u8; 32],
+    pub new_fee_bips: Option<u32>,
+    pub new_emission_rate: Option<u128>,
+    pub votes_for: u128,
+    pub votes_against: u128,
+    pub start_block: u64,
+    pub end_block: u64,
+    pub executed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct GovernanceTokenConfig {
+    pub symbol: String,
+    pub total_supply: u128,
+    pub emission_rate: u128,
+    pub quorum_bips: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct PortfolioSnapshot {
+    pub owner: AccountId,
+    pub liquidity_positions: u64,
+    pub open_orders: u64,
+    pub pending_rewards: u128,
+    pub governance_balance: u128,
+    pub estimated_inventory_value: u128,
+    pub cross_chain_positions: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct BridgeFeeQuote {
+    pub destination_chain: ChainId,
+    pub gas_estimate: u64,
+    pub protocol_fee: u128,
+    pub total_fee: u128,
+}
+
+#[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub struct CrossChainTradeIntent {
+    pub trade_id: u64,
+    pub pair_id: u64,
+    pub order_id: Option<u64>,
+    pub source_chain: ChainId,
+    pub destination_chain: ChainId,
+    pub trader: AccountId,
+    pub recipient: AccountId,
+    pub amount_in: u128,
+    pub min_amount_out: u128,
+    pub bridge_request_id: Option<u64>,
+    pub bridge_fee_quote: BridgeFeeQuote,
+    pub status: CrossChainTradeStatus,
+    pub created_at: u64,
 }
 
 // =============================================================================

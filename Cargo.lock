@@ -5001,6 +5001,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "propchain-dex"
+version = "1.0.0"
+dependencies = [
+ "ink 5.1.1",
+ "parity-scale-codec",
+ "propchain-traits",
+ "scale-info",
+]
+
+[[package]]
 name = "propchain-escrow"
 version = "1.0.0"
 dependencies = [
