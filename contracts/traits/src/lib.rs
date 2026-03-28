@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod access_control;
+pub mod constants;
 pub mod errors;
 
 pub use errors::*;
@@ -8,7 +10,7 @@ use ink::prelude::vec::Vec;
 use ink::primitives::AccountId;
 
 /// Error types for the Property Valuation Oracle
-#[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum OracleError {
     /// Property not found in the oracle system
@@ -33,6 +35,8 @@ pub enum OracleError {
     SourceAlreadyExists,
     /// Valuation request is still pending
     RequestPending,
+    /// Input batch exceeds the configured maximum size
+    BatchSizeExceeded,
 }
 
 impl core::fmt::Display for OracleError {
@@ -53,6 +57,7 @@ impl core::fmt::Display for OracleError {
             }
             OracleError::SourceAlreadyExists => write!(f, "Oracle source already registered"),
             OracleError::RequestPending => write!(f, "Valuation request is still pending"),
+            OracleError::BatchSizeExceeded => write!(f, "Batch size exceeds maximum allowed"),
         }
     }
 }
@@ -71,6 +76,7 @@ impl ContractError for OracleError {
             OracleError::InsufficientReputation => oracle_codes::ORACLE_INSUFFICIENT_REPUTATION,
             OracleError::SourceAlreadyExists => oracle_codes::ORACLE_SOURCE_ALREADY_EXISTS,
             OracleError::RequestPending => oracle_codes::ORACLE_REQUEST_PENDING,
+            OracleError::BatchSizeExceeded => 4012,
         }
     }
 
@@ -1037,4 +1043,47 @@ pub trait ComplianceChecker {
     /// Returns true if the account meets current compliance requirements
     #[ink(message)]
     fn is_compliant(&self, account: ink::primitives::AccountId) -> bool;
+}
+
+// =============================================================================
+// Structured Logging (Issue #107)
+// =============================================================================
+
+/// Log severity levels for classifying contract events.
+/// Used by off-chain tooling to filter and prioritize event streams.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum LogLevel {
+    /// Informational events: resource creation, normal state transitions
+    Info,
+    /// Warning events: unusual conditions that may need attention
+    Warning,
+    /// Error events: operation failures, rejected transactions
+    Error,
+    /// Critical events: security-related, admin changes, emergency actions
+    Critical,
+}
+
+/// Event categories for structured log aggregation and filtering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, scale::Encode, scale::Decode)]
+#[cfg_attr(
+    feature = "std",
+    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+)]
+pub enum EventCategory {
+    /// Resource creation: property registered, escrow created, token minted
+    Lifecycle,
+    /// State mutations: transfers, metadata updates, status changes
+    StateChange,
+    /// Permission changes: approvals granted or revoked
+    Authorization,
+    /// Value movements: escrow releases, refunds, fee payments
+    Financial,
+    /// System operations: pause, resume, upgrades, config changes
+    Administrative,
+    /// Regulatory and compliance: verification, audit logs, consent
+    Audit,
 }
