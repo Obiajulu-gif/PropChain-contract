@@ -1,8 +1,8 @@
-/// Centralized configuration constants for PropChain contracts.
-///
-/// All magic numbers are extracted here with documentation explaining
-/// their purpose and valid ranges. Contracts import from this module
-/// instead of using inline literals.
+//! Centralized configuration constants for PropChain contracts.
+//!
+//! All magic numbers are extracted here with documentation explaining
+//! their purpose and valid ranges. Contracts import from this module
+//! instead of using inline literals.
 
 // ── Oracle Constants ─────────────────────────────────────────────────────────
 
@@ -147,6 +147,25 @@ pub const KEY_ROTATION_EXPIRY_BLOCKS: u32 = 43_200;
 
 /// Minimum number of participants required for a valid commitment-reveal round.
 pub const MIN_RANDOMNESS_PARTICIPANTS: u32 = 2;
+// ── Monitoring Constants ─────────────────────────────────────────────────────
+
+/// Maximum number of alert subscribers per monitoring contract.
+pub const MONITORING_MAX_SUBSCRIBERS: usize = 50;
+
+/// Maximum number of metrics snapshots stored (circular buffer size).
+pub const MONITORING_MAX_SNAPSHOTS: u64 = 100;
+
+/// Default error-rate threshold for HighErrorRate alerts (10% = 1000 bips).
+pub const MONITORING_DEFAULT_ERROR_RATE_THRESHOLD_BIPS: u32 = 1_000;
+
+/// Error rate bips at which health status becomes Degraded (10%).
+pub const MONITORING_DEGRADED_THRESHOLD_BIPS: u32 = 1_000;
+
+/// Error rate bips at which health status becomes Critical (25%).
+pub const MONITORING_CRITICAL_THRESHOLD_BIPS: u32 = 2_500;
+
+/// Minimum milliseconds between repeated alert emissions for the same alert type (5 minutes).
+pub const MONITORING_ALERT_COOLDOWN_MS: u64 = 300_000;
 // ── Validation Constants ────────────────────────────────────────────────────
 
 /// Maximum batch operation size to prevent DoS via gas exhaustion.

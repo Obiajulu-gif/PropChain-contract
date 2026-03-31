@@ -12,15 +12,21 @@ members = [
     "contracts/insurance",
     "contracts/analytics",
     "contracts/fees",
+    "contracts/dex",
     "contracts/compliance_registry",
     "contracts/tax-compliance",
     "contracts/fractional",
     "contracts/prediction-market",
+    "contracts/identity",
+    "contracts/governance",
+    "contracts/crowdfunding",
+    "contracts/lending",
     "contracts/metadata",
     "contracts/database",
     "contracts/third-party",
     "contracts/staking",
     "contracts/governance",
+    "indexer",
 ]
 resolver = "2"
 

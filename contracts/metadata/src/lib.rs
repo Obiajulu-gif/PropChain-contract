@@ -25,275 +25,11 @@ use ink::storage::Mapping;
 mod propchain_metadata {
     use super::*;
 
-    // ========================================================================
-    // TYPES
-    // ========================================================================
+    // Data types extracted to types.rs (Issue #101)
+    include!("types.rs");
 
-    pub type PropertyId = u64;
-    pub type MetadataVersion = u32;
-    pub type IpfsCid = String;
-
-    // ========================================================================
-    // EXTENSIBLE METADATA SCHEMA
-    // ========================================================================
-
-    /// Core property metadata with extensible fields
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct AdvancedPropertyMetadata {
-        /// Property identifier
-        pub property_id: PropertyId,
-        /// Current version of the metadata
-        pub version: MetadataVersion,
-        /// Core property information
-        pub core: CoreMetadata,
-        /// IPFS content identifiers for associated files
-        pub ipfs_resources: IpfsResources,
-        /// Multimedia content references
-        pub multimedia: MultimediaContent,
-        /// Legal document references
-        pub legal_documents: Vec<LegalDocumentRef>,
-        /// Custom extensible attributes (key-value pairs)
-        pub custom_attributes: Vec<MetadataAttribute>,
-        /// Content hash for integrity verification
-        pub content_hash: Hash,
-        /// Creation timestamp
-        pub created_at: u64,
-        /// Last update timestamp
-        pub updated_at: u64,
-        /// Creator account
-        pub created_by: AccountId,
-        /// Whether this metadata is finalized (immutable)
-        pub is_finalized: bool,
-    }
-
-    /// Core property information (required fields)
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct CoreMetadata {
-        /// Property name/title
-        pub name: String,
-        /// Physical address/location
-        pub location: String,
-        /// Property size in square meters
-        pub size_sqm: u64,
-        /// Property type classification
-        pub property_type: MetadataPropertyType,
-        /// Current valuation in smallest currency unit
-        pub valuation: u128,
-        /// Legal description of the property
-        pub legal_description: String,
-        /// Geographic coordinates (latitude * 1e6, longitude * 1e6)
-        pub coordinates: Option<(i64, i64)>,
-        /// Year built
-        pub year_built: Option<u32>,
-        /// Number of bedrooms (for residential)
-        pub bedrooms: Option<u8>,
-        /// Number of bathrooms (for residential)
-        pub bathrooms: Option<u8>,
-        /// Zoning classification
-        pub zoning: Option<String>,
-    }
-
-    /// Property type for metadata classification
-    #[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub enum MetadataPropertyType {
-        Residential,
-        Commercial,
-        Industrial,
-        Land,
-        MultiFamily,
-        Retail,
-        Office,
-        MixedUse,
-        Agricultural,
-        Hospitality,
-    }
-
-    /// IPFS resource links for the property
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct IpfsResources {
-        /// Main metadata JSON on IPFS
-        pub metadata_cid: Option<IpfsCid>,
-        /// Documents bundle CID
-        pub documents_cid: Option<IpfsCid>,
-        /// Images bundle CID
-        pub images_cid: Option<IpfsCid>,
-        /// Legal documents bundle CID
-        pub legal_docs_cid: Option<IpfsCid>,
-        /// 3D model / virtual tour CID
-        pub virtual_tour_cid: Option<IpfsCid>,
-        /// Floor plans CID
-        pub floor_plans_cid: Option<IpfsCid>,
-    }
-
-    /// Multimedia content references
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct MultimediaContent {
-        /// Image references (CID, description, mime_type)
-        pub images: Vec<MediaItem>,
-        /// Video references
-        pub videos: Vec<MediaItem>,
-        /// Virtual tour links
-        pub virtual_tours: Vec<MediaItem>,
-        /// Floor plans
-        pub floor_plans: Vec<MediaItem>,
-    }
-
-    /// Individual media item reference
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct MediaItem {
-        /// IPFS CID or URL
-        pub content_ref: String,
-        /// Description of the media item
-        pub description: String,
-        /// MIME type
-        pub mime_type: String,
-        /// File size in bytes
-        pub file_size: u64,
-        /// Content hash for verification
-        pub content_hash: Hash,
-        /// Upload timestamp
-        pub uploaded_at: u64,
-    }
-
-    /// Legal document reference
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct LegalDocumentRef {
-        /// Document identifier
-        pub document_id: u64,
-        /// Document type
-        pub document_type: LegalDocType,
-        /// IPFS CID for the document
-        pub ipfs_cid: IpfsCid,
-        /// Content hash for integrity verification
-        pub content_hash: Hash,
-        /// Issuing authority
-        pub issuer: String,
-        /// Issue date timestamp
-        pub issue_date: u64,
-        /// Expiry date timestamp (if applicable)
-        pub expiry_date: Option<u64>,
-        /// Verification status
-        pub is_verified: bool,
-        /// Verifier account (if verified)
-        pub verified_by: Option<AccountId>,
-    }
-
-    /// Legal document types
-    #[derive(Debug, Clone, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub enum LegalDocType {
-        Deed,
-        Title,
-        Survey,
-        Inspection,
-        Appraisal,
-        TaxRecord,
-        Insurance,
-        ZoningPermit,
-        EnvironmentalReport,
-        HOADocument,
-        LeaseAgreement,
-        MortgageDocument,
-        Other,
-    }
-
-    /// Custom metadata attribute (extensible key-value pair)
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct MetadataAttribute {
-        /// Attribute key/name
-        pub key: String,
-        /// Attribute value
-        pub value: MetadataValue,
-        /// Whether this attribute is required
-        pub is_required: bool,
-    }
-
-    /// Typed metadata values for extensibility
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub enum MetadataValue {
-        Text(String),
-        Number(u128),
-        Boolean(bool),
-        Date(u64),
-        IpfsRef(IpfsCid),
-        AccountRef(AccountId),
-    }
-
-    /// Metadata version history entry
-    #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct MetadataVersionEntry {
-        pub version: MetadataVersion,
-        pub content_hash: Hash,
-        pub updated_by: AccountId,
-        pub updated_at: u64,
-        pub change_description: String,
-        /// Previous IPFS CID snapshot (for full historical access)
-        pub snapshot_cid: Option<IpfsCid>,
-    }
-
-    // ========================================================================
-    // ERRORS
-    // ========================================================================
-
-    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum Error {
-        PropertyNotFound,
-        Unauthorized,
-        InvalidMetadata,
-        MetadataAlreadyFinalized,
-        InvalidIpfsCid,
-        DocumentNotFound,
-        DocumentAlreadyExists,
-        VersionConflict,
-        RequiredFieldMissing,
-        SizeLimitExceeded,
-        InvalidContentHash,
-        SearchQueryTooLong,
-    }
+    // Error types extracted to errors.rs (Issue #101)
+    include!("errors.rs");
 
     // ========================================================================
     // EVENTS
@@ -835,10 +571,7 @@ mod propchain_metadata {
 
         /// Gets metadata version history for a property
         #[ink(message)]
-        pub fn get_version_history(
-            &self,
-            property_id: PropertyId,
-        ) -> Vec<MetadataVersionEntry> {
+        pub fn get_version_history(&self, property_id: PropertyId) -> Vec<MetadataVersionEntry> {
             let metadata = match self.metadata.get(property_id) {
                 Some(m) => m,
                 None => return Vec::new(),
@@ -1125,7 +858,12 @@ mod propchain_metadata {
         fn update_metadata_increments_version() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             let mut updated_core = default_core();
@@ -1148,7 +886,12 @@ mod propchain_metadata {
         fn finalized_metadata_cannot_be_updated() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
             contract.finalize_metadata(1).unwrap();
 
@@ -1167,10 +910,22 @@ mod propchain_metadata {
         fn version_history_tracking_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
             contract
-                .update_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x02; 32]), String::from("Update 1"), None)
+                .update_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x02; 32]),
+                    String::from("Update 1"),
+                    None,
+                )
                 .unwrap();
 
             let history = contract.get_version_history(1);
@@ -1183,7 +938,12 @@ mod propchain_metadata {
         fn add_legal_document_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             let result = contract.add_legal_document(
@@ -1206,7 +966,12 @@ mod propchain_metadata {
         fn verify_legal_document_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             contract
@@ -1233,7 +998,12 @@ mod propchain_metadata {
         fn add_media_item_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             let result = contract.add_media_item(
@@ -1255,7 +1025,12 @@ mod propchain_metadata {
         fn properties_by_type_query_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             let residential = contract.get_properties_by_type(MetadataPropertyType::Residential);
@@ -1270,7 +1045,12 @@ mod propchain_metadata {
         fn content_hash_verification_works() {
             let mut contract = AdvancedMetadataRegistry::new();
             contract
-                .create_metadata(1, default_core(), default_ipfs_resources(), Hash::from([0x01; 32]))
+                .create_metadata(
+                    1,
+                    default_core(),
+                    default_ipfs_resources(),
+                    Hash::from([0x01; 32]),
+                )
                 .unwrap();
 
             assert_eq!(
@@ -1283,4 +1063,7 @@ mod propchain_metadata {
             );
         }
     }
+    // Unit tests extracted to tests.rs (Issue #101)
+    include!("tests.rs");
+
 }

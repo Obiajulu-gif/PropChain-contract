@@ -31,126 +31,11 @@ mod propchain_proxy {
     /// Maximum number of stored versions for rollback
     const MAX_VERSION_HISTORY: u32 = 10;
 
-    // ========================================================================
-    // ERROR TYPES
-    // ========================================================================
+    // Error types extracted to errors.rs (Issue #101)
+    include!("errors.rs");
 
-    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum Error {
-        Unauthorized,
-        UpgradeFailed,
-        /// Upgrade proposal not found
-        ProposalNotFound,
-        /// Upgrade proposal already exists
-        ProposalAlreadyExists,
-        /// Timelock period has not passed
-        TimelockNotExpired,
-        /// Insufficient governance approvals
-        InsufficientApprovals,
-        /// Caller has already approved this proposal
-        AlreadyApproved,
-        /// No previous version to rollback to
-        NoPreviousVersion,
-        /// Version compatibility check failed
-        IncompatibleVersion,
-        /// Contract is currently in migration state
-        MigrationInProgress,
-        /// Not a registered governor
-        NotGovernor,
-        /// Proposal has been cancelled
-        ProposalCancelled,
-        /// Emergency pause is active
-        EmergencyPauseActive,
-        /// Invalid timelock period
-        InvalidTimelockPeriod,
-    }
-
-    // ========================================================================
-    // DATA STRUCTURES
-    // ========================================================================
-
-    /// Version information for deployed contract implementations
-    #[derive(
-        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
-    )]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct VersionInfo {
-        /// Semantic version: major
-        pub major: u32,
-        /// Semantic version: minor
-        pub minor: u32,
-        /// Semantic version: patch
-        pub patch: u32,
-        /// Code hash of this version's implementation
-        pub code_hash: Hash,
-        /// Block number when this version was deployed
-        pub deployed_at_block: u32,
-        /// Timestamp when this version was deployed
-        pub deployed_at: u64,
-        /// Description of changes in this version
-        pub description: String,
-        /// Account that deployed this version
-        pub deployed_by: AccountId,
-    }
-
-    /// Upgrade proposal requiring governance approval
-    #[derive(
-        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
-    )]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct UpgradeProposal {
-        /// Unique proposal ID
-        pub id: u64,
-        /// New code hash to upgrade to
-        pub new_code_hash: Hash,
-        /// Proposed version info
-        pub version: VersionInfo,
-        /// Account that proposed the upgrade
-        pub proposer: AccountId,
-        /// Block number when proposal was created
-        pub created_at_block: u32,
-        /// Timestamp when proposal was created
-        pub created_at: u64,
-        /// Block number after which upgrade can be executed
-        pub timelock_until_block: u32,
-        /// Accounts that have approved this proposal
-        pub approvals: Vec<AccountId>,
-        /// Required number of approvals
-        pub required_approvals: u32,
-        /// Whether the proposal is cancelled
-        pub cancelled: bool,
-        /// Whether the proposal has been executed
-        pub executed: bool,
-        /// Migration notes / instructions
-        pub migration_notes: String,
-    }
-
-    /// Migration state tracking
-    #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        Eq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
-    )]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum MigrationState {
-        /// No migration in progress
-        None,
-        /// Migration proposed and awaiting approval
-        Proposed,
-        /// Migration approved, waiting for timelock
-        Approved,
-        /// Migration in progress (executing)
-        InProgress,
-        /// Migration completed
-        Completed,
-        /// Migration rolled back
-        RolledBack,
-    }
+    // Data types extracted to types.rs (Issue #101)
+    include!("types.rs");
 
     // ========================================================================
     // EVENTS
@@ -329,11 +214,12 @@ mod propchain_proxy {
                 timelock_blocks
             };
 
-            let effective_required = if required_approvals == 0 || required_approvals > governors.len() as u32 {
-                1
-            } else {
-                required_approvals
-            };
+            let effective_required =
+                if required_approvals == 0 || required_approvals > governors.len() as u32 {
+                    1
+                } else {
+                    required_approvals
+                };
 
             Self {
                 code_hash,
@@ -767,7 +653,10 @@ mod propchain_proxy {
         /// Returns the current version as (major, minor, patch)
         #[ink(message)]
         pub fn current_version(&self) -> (u32, u32, u32) {
-            if let Some(version) = self.version_history.get(self.current_version_index as usize) {
+            if let Some(version) = self
+                .version_history
+                .get(self.current_version_index as usize)
+            {
                 (version.major, version.minor, version.patch)
             } else {
                 (1, 0, 0)
@@ -813,7 +702,8 @@ mod propchain_proxy {
         /// Returns whether version compatibility checks pass for a target version
         #[ink(message)]
         pub fn check_compatibility(&self, major: u32, minor: u32, patch: u32) -> bool {
-            self.check_version_compatibility(major, minor, patch).is_ok()
+            self.check_version_compatibility(major, minor, patch)
+                .is_ok()
         }
 
         // ====================================================================
@@ -894,9 +784,6 @@ mod propchain_proxy {
         }
     }
 
-    // ========================================================================
-    // UNIT TESTS
-    // ========================================================================
 
     #[cfg(test)]
     mod tests {
@@ -1009,14 +896,7 @@ mod propchain_proxy {
 
             let new_hash = Hash::from([0x43; 32]);
             proxy
-                .propose_upgrade(
-                    new_hash,
-                    1,
-                    1,
-                    0,
-                    String::from("Test"),
-                    String::from(""),
-                )
+                .propose_upgrade(new_hash, 1, 1, 0, String::from("Test"), String::from(""))
                 .unwrap();
 
             let result = proxy.cancel_upgrade(1);
@@ -1039,4 +919,6 @@ mod propchain_proxy {
             assert_eq!(proxy.governors().len(), 1);
         }
     }
+    // Unit tests extracted to tests.rs (Issue #101)
+    include!("tests.rs");
 }
