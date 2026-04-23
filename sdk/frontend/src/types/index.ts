@@ -868,6 +868,10 @@ export interface ClientOptions {
   maxReconnectAttempts?: number;
   /** Connection timeout in milliseconds (default: 30000) */
   connectionTimeout?: number;
+  /** Gas buffer percentage to add to estimates (e.g. 15 for 15%) (default: 10) */
+  gasBufferPercentage?: number;
+  /** Automatically adjust gas buffers based on network congestion (default: false) */
+  autoAdjustGas?: boolean;
 }
 
 /**
