@@ -77,6 +77,8 @@ pub enum EventKind {
     // ── Governance ───────────────────────────────────────────────────────
     /// A governance proposal was created.
     ProposalCreated { token_id: TokenId, proposal_id: u64 },
+
+    // ── Bridge ───────────────────────────────────────────────────────────
     /// A cross-chain bridge request was created.
     BridgeRequested { request_id: u64, token_id: TokenId },
     /// A bridge request completed successfully.
@@ -91,9 +93,10 @@ pub enum EventKind {
 
 // ── Observer trait ───────────────────────────────────────────────────────────
 
+/// Implement this trait for any type that should react to contract events.
 pub trait EventObserver {
-    /// Called by the [`EventBus`] for each emitted event. Implementations should be cheap — defer heavy
-    /// work to off-chain indexers.
+    /// Called when an event is emitted by the contract this observer is registered
+    /// with.  Implementations should be cheap — defer heavy work to off-chain indexers.
     fn on_event(&mut self, kind: &EventKind);
 
     /// Human-readable name used in logs and diagnostics.
@@ -125,7 +128,7 @@ impl EventBus {
         }
     }
 
-    /// Register a new observer. Observers are notified in FIFO order.
+    /// Register an observer. Observers are notified in FIFO order.
     pub fn subscribe(&mut self, observer: Box<dyn EventObserver>) {
         self.observers.push(observer);
     }

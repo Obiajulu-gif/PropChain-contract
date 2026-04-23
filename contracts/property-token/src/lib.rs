@@ -92,6 +92,8 @@ pub mod property_token {
         share_reward_rate_bps: Mapping<TokenId, u128>,
         /// Vesting schedules for tokens (TokenId, AccountId)
         vesting_schedules: Mapping<(TokenId, AccountId), VestingSchedule>,
+        /// Custom URI overrides for tokens
+        token_uris: Mapping<TokenId, String>,
     }
 
     // Data types extracted to types.rs (Issue #101)
@@ -405,6 +407,26 @@ pub mod property_token {
         pub token_id: TokenId,
         #[ink(topic)]
         pub funder: AccountId,
+    // --- Vesting Events ---
+    #[ink(event)]
+    pub struct VestingScheduleCreated {
+        #[ink(topic)]
+        pub token_id: TokenId,
+        #[ink(topic)]
+        pub account: AccountId,
+        pub role: VestingRole,
+        pub total_amount: u128,
+        pub start_time: u64,
+        pub cliff_duration: u64,
+        pub vesting_duration: u64,
+    }
+
+    #[ink(event)]
+    pub struct VestedTokensClaimed {
+        #[ink(topic)]
+        pub token_id: TokenId,
+        #[ink(topic)]
+        pub account: AccountId,
         pub amount: u128,
     }
 
@@ -497,6 +519,7 @@ pub mod property_token {
                 share_last_reward_block: Mapping::default(),
                 share_reward_rate_bps: Mapping::default(),
                 vesting_schedules: Mapping::default(),
+                token_uris: Mapping::default(),
             }
         }
 

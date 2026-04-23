@@ -14,7 +14,8 @@ pub mod randomness;
 pub use access_control::*;
 pub use crypto::*;
 pub use di::*;
-pub use observer::*;
+// Export observer types explicitly to avoid name collision with event_bus::EventBus trait
+pub use observer::{EventKind, EventObserver};
 pub mod i18n;
 pub mod monitoring;
 
